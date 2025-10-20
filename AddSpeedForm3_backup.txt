@@ -1,0 +1,60 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace DataGrid1
+{
+    public partial class AddSpeedForm3 : Form
+    {
+        public double segmentID;
+        public string station;
+        public SpeedRestriction spd;
+        public AddSpeedForm3()
+        {
+
+            InitializeComponent();
+
+            AddSpeedGridView1.Rows.Add();
+            //AddSpeedGridView1.Rows[0].Cells[0].Value = 0;
+            SegmentIdlabel1.Text = "56" + station;
+        }
+
+        public AddSpeedForm3(
+            double segmentID,
+            string station
+            
+        )
+        {
+            this.segmentID = segmentID;
+            this.station = station;
+            InitializeComponent();
+            SegmentIdlabel1.Text = "Segment Id: " + segmentID.ToString();
+            Stationlabel2.Text ="Станция/перегон: " + station;
+            AddSpeedGridView1.Rows.Add();
+            AddSpeedGridView1.Rows[0].Cells[0].Value = segmentID.ToString();
+            
+        }
+
+        private void OKbutton1_Click(object sender, EventArgs e)
+        {
+            PointOnTrack start1 = new PointOnTrack();
+            start1.SegmentID = segmentID;
+            start1.PointOnTrackKm = AddSpeedGridView1.Rows[0].Cells[1].Value.ToString();
+            start1.PointOnTrackPk = Convert.ToDouble(AddSpeedGridView1.Rows[0].Cells[2].Value);
+            start1.PointOnTrackM = Convert.ToDouble(AddSpeedGridView1.Rows[0].Cells[3].Value);
+            PointOnTrack end1 = new PointOnTrack();
+            end1.SegmentID = segmentID;
+            end1.PointOnTrackKm = AddSpeedGridView1.Rows[0].Cells[4].Value.ToString();
+            end1.PointOnTrackPk = Convert.ToDouble(AddSpeedGridView1.Rows[0].Cells[5].Value);
+            end1.PointOnTrackM = Convert.ToDouble(AddSpeedGridView1.Rows[0].Cells[6].Value);
+            spd = new SpeedRestriction( start1, end1, Convert.ToDouble(AddSpeedGridView1.Rows[0].Cells[7].Value));
+            Close();
+        }
+    }
+}

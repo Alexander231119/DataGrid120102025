@@ -1,0 +1,604 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.OleDb;
+using System.Globalization;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace DataGrid1
+{
+    public partial class Form1 : Form
+    {
+        string ConnectSrting1 = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=";
+        private string filename;
+        public static string ConnectString = "Provider=Microsoft.Jet.OLEDB.4.0;Data Source=Demianka2017.mdb;";
+        public double defaultspeed = 80; // км/ч
+        SpeedrestrictionComparer sc = new SpeedrestrictionComparer();
+
+        List<SpeedRestriction> data1 = new List<SpeedRestriction>(); // список speedrestrictions
+        List<Segment> Segments = new List<Segment>();
+        
+        private OleDbConnection myConnection;
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (myConnection != null)
+            myConnection.Close();
+        }
+
+        private void LoadButton_Click(object sender, EventArgs e)
+        {
+            data1.Clear();
+            dataGridView1.Rows.Clear();
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                filename = openFileDialog1.FileName;
+                ConnectString = ConnectSrting1 + filename + ";";
+                LoadDataGrid();
+                
+            }
+        }
+
+        public void LoadDataGrid()
+        {
+            myConnection = new OleDbConnection(ConnectString);
+            myConnection.Open();
+
+            
+
+            string query =
+                "SELECT TO.TrackObjectName, P.DicPointOntrackkindID, P.PointOntrackKM, P.PointOntrackPk, P.PointOntrackM, iif(ST.StationName is null, iif(STDE.StationName is null, STCP.StationName, STDE.StationName), ST.StationName) AS Station " +
+                "FROM(((((((PointOnTrack AS P " +
+                "LEFT JOIN TrackObject AS[TO] ON P.TrackObjectID = TO.TrackObjectID) " +
+                "LEFT JOIN Station AS[ST] ON TO.TrackObjectID = ST.TrackObjectID) " +
+                "LEFT JOIN CrossingPiece AS CP ON TO.TrackObjectID = CP.TrackObjectID) " +
+                "LEFT JOIN Station AS STCP ON CP.StationID = STCP.TrackObjectID) " +
+                "LEFT JOIN DeadEnd AS DE ON TO.TrackObjectID = DE.TrackObjectID) " +
+                "LEFT JOIN Station AS STDE ON DE.StationID = STDE.TrackObjectID) " +
+                "LEFT JOIN PredefinedRouteSegment AS PS ON P.SegmentID = PS.SegmentID) " +
+                "LEFT JOIN Segment AS S ON PS.SegmentID = S.SegmentID " +
+                "WHERE(((P.DicPointOntrackkindID)In(8, 27, 28, 29)) " +
+                "AND P.SegmentID IN(SELECT SegmentID FROM PredefinedRouteSegment)) " +
+                "ORDER BY PS.SegmentID, P.PointOntrackCoordinate* PS.PredefinedRouteSegmentFromStartToEnd + S.SegmentLength * ((PS.PredefinedRouteSegmentFromStartToEnd - 1) / (0 - 2))";
+
+            OleDbCommand command = new OleDbCommand(query, myConnection);
+
+            OleDbDataReader reader = command.ExecuteReader();
+
+            List<string[]> data = new List<string[]>();
+
+            while (reader.Read())
+            {
+                data.Add(new string[4]);
+                data[data.Count - 1][0] = reader[2].ToString();
+                data[data.Count - 1][1] = reader[3].ToString();
+                data[data.Count - 1][2] = reader[4].ToString();
+                data[data.Count - 1][3] = reader[5].ToString();
+                
+            }
+            reader.Close();
+
+
+            foreach (string[] s in data)
+            {
+                dataGridView1.Rows.Add(s);
+            }
+        }
+
+        private void LoadTest2_Click(object sender, EventArgs e)
+        {
+            data1.Clear();
+            Segments.Clear();
+            dataGridView1.Rows.Clear();
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                filename = openFileDialog1.FileName;
+                ConnectString = ConnectSrting1 + filename + ";";
+                LoadDataGrid2();
+                
+            }
+        }
+
+        public void LoadDataGrid2()
+        {
+
+            dataGridView1.Columns[0].HeaderText = "Станция / перегон";
+            dataGridView1.Columns[1].HeaderText = "SegmentID";
+            dataGridView1.Columns[2].HeaderText = "нач КМ";
+            dataGridView1.Columns[3].HeaderText = "нач ПК";
+            dataGridView1.Columns[4].HeaderText = "нач М";
+            dataGridView1.Columns[5].HeaderText = "кон КМ";
+            dataGridView1.Columns[6].HeaderText = "кон ПК";
+            dataGridView1.Columns[7].HeaderText = "кон М";
+            dataGridView1.Columns[8].HeaderText = "V км/ч";
+
+
+            myConnection = new OleDbConnection(ConnectString);
+            myConnection.Open();
+
+
+            string query2 =
+                "SELECT P.DicPointOnTrackKindID, P.TrackObjectID, P.SegmentID, " +
+                "P.PointOnTrackCoordinate, P.PointOnTrackKm, P.PointOnTrackPk, P.PointOnTrackM, " +
+                "P.PointOnTrackUsageDirection, PS.PredefinedRouteSegmentFromStartToEnd, " +
+                "iif(ST.StationName is null, iif(STDE.StationName is null, STCP.StationName, STDE.StationName), ST.StationName) AS Station " +
+                "FROM (((((((PointOnTrack AS P " +
+                "LEFT JOIN TrackObject AS [TO] ON P.TrackObjectID = TO.TrackObjectID) " +
+                "LEFT JOIN Station AS[ST] ON TO.TrackObjectID = ST.TrackObjectID) " +
+                "LEFT JOIN CrossingPiece AS CP ON TO.TrackObjectID = CP.TrackObjectID) " +
+                "LEFT JOIN Station AS STCP ON CP.StationID = STCP.TrackObjectID) " +
+                "LEFT JOIN DeadEnd AS DE ON TO.TrackObjectID = DE.TrackObjectID) " +
+                "LEFT JOIN Station AS STDE ON DE.StationID = STDE.TrackObjectID) " +
+                "LEFT JOIN PredefinedRouteSegment AS [PS] ON P.SegmentID = PS.SegmentID) " +
+                "LEFT JOIN Segment AS S ON PS.SegmentID = S.SegmentID " +
+                "WHERE (P.DicPointOnTrackKindID In (8,27,28,29) " +
+                "AND P.SegmentID IN (SELECT SegmentID FROM PredefinedRouteSegment)) " +
+                "ORDER BY PS.SegmentID, P.PointOntrackCoordinate* PS.PredefinedRouteSegmentFromStartToEnd + S.SegmentLength * ((PS.PredefinedRouteSegmentFromStartToEnd - 1) / (0 - 2))";
+
+
+
+            OleDbCommand command = new OleDbCommand(query2, myConnection);
+
+            OleDbDataReader reader = command.ExecuteReader();
+
+            List<PointOnTrack> data = new List<PointOnTrack>(); // список точек на пути из базы
+
+
+
+            // выбираем точки на пути из базы
+            while (reader.Read())
+            {
+                data.Add(new PointOnTrack(
+                    Convert.ToDouble(reader[2]),
+                    Convert.ToDouble(reader[3]),
+                    reader[4].ToString(),
+                    Convert.ToDouble(reader[5]),
+                    Convert.ToDouble(reader[6]),
+                    Convert.ToDouble(reader[7]),
+                    Convert.ToDouble(reader[8]),
+                    reader[9].ToString()));
+            }
+            reader.Close();
+
+
+
+            // Создаём список ограничений скоростей по отобранным точкам на пути
+            for (int i = 1; i < data.Count; i++)
+            {
+
+                if (data[i - 1].SegmentID == data[i].SegmentID)
+                {
+
+                    data1.Add(new SpeedRestriction(data[i - 1], data[i], defaultspeed));
+                    data1[data1.Count - 1].Start.PointOnTrackUsageDirection = 1;
+                    data1[data1.Count - 1].End.PointOnTrackUsageDirection = -1;
+
+                    if (data[i - 1].station == data[i].station)
+                    {
+                        data1[data1.Count - 1].station = data[i].station.ToUpper();
+                    }
+                    else
+                    {
+                        data1[data1.Count - 1].station = data[i - 1].station.ToUpper() + " - " + data[i].station.ToUpper();
+                    }
+                }
+
+            }
+            // заполняем dataGrid View
+            FillDataGrid();
+
+
+            // загрузить сегменты из базы
+
+            string query3 =
+                "SELECT S.SegmentID, S.SegmentName, S.SegmentLength, S.TrackID, PS.PredefinedRouteSegmentFromStartToEnd " +
+                "FROM Segment AS S " +
+                "LEFT JOIN PredefinedRouteSegment AS [PS] ON S.SegmentID = PS.SegmentID " +
+                "WHERE S.SegmentID IN (SELECT SegmentID FROM PredefinedRouteSegment)";
+
+            OleDbCommand command3 = new OleDbCommand(query3, myConnection);
+
+            OleDbDataReader reader3 = command3.ExecuteReader();
+
+            while (reader3.Read())
+            {
+                Segments.Add(new Segment(
+                    Convert.ToDouble(reader3[0]),
+                    reader3[1].ToString(),
+                    Convert.ToDouble(reader3[2]),
+                    Convert.ToDouble(reader3[3]),
+                    Convert.ToDouble(reader3[4])));
+            }
+            reader3.Close();
+            data.Clear();
+        }
+
+
+
+
+        // внести ограничения скоростей в базу данных
+        private void TestButton3_Click(object sender, EventArgs e)
+        {
+            // внести величины скоростей из таблицы datagridview1 в список ограничений скоростей
+            valueschange();
+
+            if ((myConnection != null) && (data1.Count() > 0))
+            {
+                //найти наибольший TrackObjectId
+                string query1 = "SELECT MAX(TrackObjectID) FROM TrackObject";
+                OleDbCommand command1 = new OleDbCommand(query1, myConnection);
+                OleDbDataReader reader = command1.ExecuteReader();
+                reader.Read();
+                double TrackObjectID = Convert.ToDouble(reader[0]);
+                reader.Close();
+
+                //найти наибольший PointOntrackID
+                string query3 = "SELECT MAX(PointOnTrackID) FROM PointOnTrack";
+                OleDbCommand command3 = new OleDbCommand(query3, myConnection);
+                OleDbDataReader reader3 = command3.ExecuteReader();
+                reader3.Read();
+                double PointOnTrackID = Convert.ToDouble(reader3[0]);
+                reader3.Close();
+
+                foreach (SpeedRestriction s in data1)
+                {
+
+                    // внести ограничения скорости в таблицу TrackObject
+                    TrackObjectID += 1;
+                    string TrackObjectName = "огр. " + s.Value + " км/ч на " + s.Start.PointOnTrackKm + " км " + s.Start.PointOnTrackPk + " пк " + s.Start.PointOnTrackM.ToString("G", CultureInfo.InvariantCulture) + " м";
+
+                    string query = "INSERT INTO TrackObject ( TrackObjectID, DicTrackObjectKindID, TrackObjectName) VALUES (" + TrackObjectID + ", 8, '" + TrackObjectName + "' )";
+                    OleDbCommand command = new OleDbCommand(query, myConnection);
+                    command.ExecuteNonQuery();
+
+                    // внести ограничения скоростей в таблицу PermanentRestriction
+                    string query2 = "INSERT INTO PermanentRestriction (TrackObjectID, PermanentRestrictionSpeed, PermRestrictionOnlyHeader, PermRestrictionForEmptyTrain) VALUES ( " + TrackObjectID + ", " + s.Value + ", 0, 0 )";
+                    OleDbCommand command2 = new OleDbCommand(query2, myConnection);
+                    command2.ExecuteNonQuery();
+
+                    // внести ограничения скоростей в таблицу PointOntrack
+                    double PredefinedRouteSegmentFromStartToEnd;
+
+                    if (s.Start.PredefinedRouteSegmentFromStartToEnd == 1) // если на этом отрезки возрастает километраж
+                    {
+                        PointOnTrackID += 1;
+                        PredefinedRouteSegmentFromStartToEnd = 1;
+                        InsertPointOntrack(TrackObjectID, PointOnTrackID, s.Start, PredefinedRouteSegmentFromStartToEnd);
+
+                        PointOnTrackID += 1;
+                        PredefinedRouteSegmentFromStartToEnd = -1;
+                        InsertPointOntrack(TrackObjectID, PointOnTrackID, s.End, PredefinedRouteSegmentFromStartToEnd);
+                    }
+                    else
+                    {
+                        PointOnTrackID += 1;
+                        PredefinedRouteSegmentFromStartToEnd = 1;
+                        InsertPointOntrack(TrackObjectID, PointOnTrackID, s.End, PredefinedRouteSegmentFromStartToEnd);
+
+                        PointOnTrackID += 1;
+                        PredefinedRouteSegmentFromStartToEnd = -1;
+                        InsertPointOntrack(TrackObjectID, PointOnTrackID, s.Start, PredefinedRouteSegmentFromStartToEnd);
+                    }
+                }
+                MessageBox.Show("Введены ограничения скорости \n всего: " + data1.Count.ToString(), "Автозаполнение скоростей", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+            }
+
+            
+        }
+        
+        private void DefSpeedtextBox1_TextChanged(object sender, EventArgs e)
+        {
+            defaultspeed = Convert.ToDouble(DefSpeedtextBox1.Text);
+        }
+
+        // найти индекс сегмента по SegmentID
+        public int SegmentIndexFind(double SegmentID)
+        {           
+           int index =  Segments.FindIndex((Segment) => Segment.SegmentID == SegmentID);
+            return index;
+        }
+
+        // ввести в базу точку на пути
+        void InsertPointOntrack(double TrackObjectID, double PointOnTrackID, PointOnTrack p, double PredefinedRouteSegmentFromStartToEnd)
+        {
+            string query4 = "INSERT INTO PointOnTrack ( PointOnTrackID, DicPointOnTrackKindID, TrackObjectID, SegmentID, PointOnTrackCoordinate, PointOnTrackKm, PointOnTrackPk, PointOnTrackM, PointOnTrackUsageDirection ) " +
+            "VALUES (" + PointOnTrackID + ", 2, " + TrackObjectID + ", " + p.SegmentID + ", " + p.PointOnTrackCoordinate.ToString("G", CultureInfo.InvariantCulture) + ", " + p.PointOnTrackKm + ", " + p.PointOnTrackPk.ToString("G", CultureInfo.InvariantCulture) + ", " + p.PointOnTrackM.ToString("G", CultureInfo.InvariantCulture) + ", " + PredefinedRouteSegmentFromStartToEnd.ToString("G", CultureInfo.InvariantCulture) + " )";
+            OleDbCommand command4 = new OleDbCommand(query4, myConnection);
+            command4.ExecuteNonQuery();
+        }
+
+
+        // заполняем dataGrid View из data1
+        private void FillDataGrid()
+        {
+            foreach (SpeedRestriction s in data1)
+            {
+
+                dataGridView1.Rows.Add(
+                    s.station,
+                    s.Start.SegmentID,
+                    s.Start.PointOnTrackKm,
+                    s.Start.PointOnTrackPk,
+                    s.Start.PointOnTrackM,
+                    s.End.PointOnTrackKm,
+                    s.End.PointOnTrackPk,
+                    s.End.PointOnTrackM,
+                    s.Value);
+
+            }
+        }
+
+        //
+        private void RefillDataGrid()
+        {
+            for (int i = 0; i < data1.Count; i++)
+            {
+                dataGridView1.Rows[i].Cells[0].Value = data1[i].station;
+                dataGridView1.Rows[i].Cells[1].Value = data1[i].Start.SegmentID;
+                dataGridView1.Rows[i].Cells[2].Value = data1[i].Start.PointOnTrackKm;
+                dataGridView1.Rows[i].Cells[3].Value = data1[i].Start.PointOnTrackPk;
+                dataGridView1.Rows[i].Cells[4].Value = data1[i].Start.PointOnTrackM;
+                dataGridView1.Rows[i].Cells[5].Value = data1[i].End.PointOnTrackKm;
+                dataGridView1.Rows[i].Cells[6].Value = data1[i].End.PointOnTrackPk;
+                dataGridView1.Rows[i].Cells[7].Value = data1[i].End.PointOnTrackM;
+                dataGridView1.Rows[i].Cells[8].Value = data1[i].Value;
+
+            }
+        }
+
+        // внести величины скоростей из таблицы datagridview1 в список ограничений скоростей
+        private void valueschange()
+        {
+            for (int i = 0; i < data1.Count; i++)
+            {
+                data1[i].Value = Convert.ToInt32(dataGridView1.Rows[i].Cells[8].Value);
+            }
+        }
+
+        // внести все значения из таблицы datagridview1 в список ограничений скоростей
+
+        private void Refilldata1()
+        {
+            for (int i = 0; i < data1.Count(); i++)
+            {
+                data1[i].station = dataGridView1.Rows[i].Cells[0].Value.ToString();
+                data1[i].Start.SegmentID = Convert.ToDouble(dataGridView1.Rows[i].Cells[1].Value);
+                data1[i].Start.PointOnTrackKm = dataGridView1.Rows[i].Cells[2].Value.ToString();
+                data1[i].Start.PointOnTrackPk = Convert.ToDouble(dataGridView1.Rows[i].Cells[3].Value);
+                data1[i].Start.PointOnTrackM = Convert.ToDouble(dataGridView1.Rows[i].Cells[4].Value);
+                data1[i].End.PointOnTrackKm = dataGridView1.Rows[i].Cells[5].Value.ToString();
+                data1[i].End.PointOnTrackPk = Convert.ToDouble(dataGridView1.Rows[i].Cells[6].Value);
+                data1[i].End.PointOnTrackM = Convert.ToDouble(dataGridView1.Rows[i].Cells[7].Value);
+                data1[i].Value = Convert.ToInt32(dataGridView1.Rows[i].Cells[8].Value);
+            }
+        }
+
+
+        // occurs when a mouse clicks on a cell
+        private void dataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            if (data1.Count() > 0 && (data1.Count() > Convert.ToInt32(dataGridView1.CurrentCell.RowIndex)))
+            {
+                int Rowindex = Convert.ToInt32(dataGridView1.CurrentCell.RowIndex);
+                int SegmentsIndex = SegmentIndexFind(data1[Rowindex].Start.SegmentID);
+                label1.Text = Segments[SegmentsIndex].SegmentID.ToString() + " " + Segments[SegmentsIndex].SegmentName + " " + Segments[SegmentsIndex].SegmentLength.ToString();
+            }
+        }
+
+        // добавить Speedrestrictoin
+
+        private void addspeedrestriction()
+        {
+            int Rowindex = Convert.ToInt32(dataGridView1.CurrentCell.RowIndex);
+            //data1.Add(new SpeedRestriction(data1[Rowindex].Start, data1[Rowindex].End, defaultspeed, data1[Rowindex].station.ToLower() ));
+            data1.Add(new SpeedRestriction(data1[Rowindex].Start, data1[Rowindex].End, defaultspeed ));
+            //data1.OrderBy(SpeedRestriction => SpeedRestriction.Start.PointOnTrackCoordinate);
+            //SpeedrestrictionComparer sc = new SpeedrestrictionComparer();
+            data1.Sort(sc);
+            dataGridView1.Rows.Add();
+            RefillDataGrid();
+        }
+
+        private void Addbutton1_Click(object sender, EventArgs e)
+        {
+            addspeedrestriction();
+
+        }
+
+        private void dataGridView1_RowLeave(object sender, DataGridViewCellEventArgs e)
+        {
+            Refilldata1();
+            //SpeedrestrictionComparer sc = new SpeedrestrictionComparer();
+            data1.Sort(sc);
+            RefillDataGrid();
+        }
+
+        private void Checkbutton1_Click(object sender, EventArgs e)
+        {
+            //Refilldata1();
+            data1[2].Start.PointOnTrackKm = "strtkm";
+            data1[2].End.PointOnTrackKm = "end";
+
+            //SpeedrestrictionComparer sc = new SpeedrestrictionComparer();
+            data1.Sort(sc);
+            RefillDataGrid();
+        }
+
+        private void dataGridView1_CellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (dataGridView1.Rows.Count > 0)
+            {
+                int i = dataGridView1.CurrentCell.RowIndex;
+                data1[i].station = dataGridView1.Rows[i].Cells[0].Value.ToString();
+                data1[i].Start.SegmentID = Convert.ToDouble(dataGridView1.Rows[i].Cells[1].Value);
+                data1[i].Start.PointOnTrackKm = dataGridView1.Rows[i].Cells[2].Value.ToString();
+                data1[i].Start.PointOnTrackPk = Convert.ToDouble(dataGridView1.Rows[i].Cells[3].Value);
+                data1[i].Start.PointOnTrackM = Convert.ToDouble(dataGridView1.Rows[i].Cells[4].Value);
+                data1[i].End.PointOnTrackKm = dataGridView1.Rows[i].Cells[5].Value.ToString();
+                data1[i].End.PointOnTrackPk = Convert.ToDouble(dataGridView1.Rows[i].Cells[6].Value);
+                data1[i].End.PointOnTrackM = Convert.ToDouble(dataGridView1.Rows[i].Cells[7].Value);
+                data1[i].Value = Convert.ToInt32(dataGridView1.Rows[i].Cells[8].Value);
+            }
+        }
+    }
+    public class PointOnTrack
+    {
+        public double SegmentID;
+        public double PointOnTrackCoordinate;
+        public string PointOnTrackKm;
+        public double PointOnTrackPk;
+        public double PointOnTrackM;
+        public double PointOnTrackUsageDirection;
+        public double PredefinedRouteSegmentFromStartToEnd;
+        public string station = "";
+
+        // конструктор
+        public PointOnTrack(double SegmentID, double PointOnTrackCoordinate, 
+            string PointOnTrackKm, double PointOnTrackPk, double PointOnTrackM, 
+            double PointOnTrackUsageDirection, double PredefinedRouteSegmentFromStartToEnd)
+        {
+            this.SegmentID = SegmentID;
+            this.PointOnTrackCoordinate = PointOnTrackCoordinate;
+            this.PointOnTrackKm = PointOnTrackKm;
+            this.PointOnTrackPk = PointOnTrackPk;
+            this.PointOnTrackM = PointOnTrackM;
+            this.PointOnTrackUsageDirection = PointOnTrackUsageDirection;
+            this.PredefinedRouteSegmentFromStartToEnd = PredefinedRouteSegmentFromStartToEnd;
+        }
+
+        // конструктор
+        public PointOnTrack(double SegmentID, double PointOnTrackCoordinate,
+            string PointOnTrackKm, double PointOnTrackPk, double PointOnTrackM,
+            double PointOnTrackUsageDirection, double PredefinedRouteSegmentFromStartToEnd, string station)
+        {
+            this.SegmentID = SegmentID;
+            this.PointOnTrackCoordinate = PointOnTrackCoordinate;
+            this.PointOnTrackKm = PointOnTrackKm;
+            this.PointOnTrackPk = PointOnTrackPk;
+            this.PointOnTrackM = PointOnTrackM;
+            this.PointOnTrackUsageDirection = PointOnTrackUsageDirection;
+            this.PredefinedRouteSegmentFromStartToEnd = PredefinedRouteSegmentFromStartToEnd;
+            this.station = station;
+        }
+
+        // конструктор предложенный создать автоматически
+        public PointOnTrack()
+        {
+        }
+    }
+
+    public class SpeedRestriction
+    {
+        public PointOnTrack Start;
+        public PointOnTrack End;
+        public double Value;
+        public string station = "";
+        //конструктор
+        public SpeedRestriction(PointOnTrack Start, PointOnTrack End, double Value)
+        {
+            this.Start = Start;
+            this.End = End;
+            this.Value = Value;
+        }
+
+        //конструктор
+        public SpeedRestriction(PointOnTrack Start, PointOnTrack End, double Value, string station)
+        {
+            this.Start = Start;
+            this.End = End;
+            this.Value = Value;
+            this.station = station;
+        }
+    }
+    
+
+    public class Segment
+    {
+        public double SegmentID;
+        public string SegmentName;
+        public double SegmentLength;
+        public double TrackID;
+        public double PredefinedRouteSegmentFromStartToEnd;
+
+        //конструктор
+        public Segment()
+        {
+
+        }
+        public Segment(
+            double SegmentID, 
+            string SegmentName, 
+            double SegmentLength, 
+            double TrackID, 
+            double PredefinedRouteSegmentFromStartToEnd)
+        {
+            this.SegmentID = SegmentID;
+            this.SegmentName = SegmentName;
+            this.SegmentLength = SegmentLength;
+            this.TrackID = TrackID;
+            this.PredefinedRouteSegmentFromStartToEnd = PredefinedRouteSegmentFromStartToEnd;
+        }
+    }
+
+    //сравнение SpeedRestriction по segmentId и сoordinate и длине названия станции
+    class SpeedrestrictionComparer : IComparer<SpeedRestriction>
+    {
+        public int Compare(SpeedRestriction x, SpeedRestriction y)
+        {
+            int a = Convert.ToInt32(x.Start.SegmentID);
+            int b = Convert.ToInt32(y.Start.SegmentID);
+
+            double c = x.Start.PointOnTrackCoordinate;
+            double d = y.Start.PointOnTrackCoordinate;
+            
+            if ( a > b )
+            {
+                return 1;
+            }
+            else if ( a < b )
+            {
+                return -1;
+            }
+            else if ( a == b )
+            {
+                    if (c > d)
+                    {
+                        if (x.Start.PredefinedRouteSegmentFromStartToEnd == 1)
+                            return 1;
+                        else if (x.Start.PredefinedRouteSegmentFromStartToEnd == -1)
+                            return -1;
+                    }
+                    else if (d > c)
+                    {
+                        if (x.Start.PredefinedRouteSegmentFromStartToEnd == 1)
+                            return -1;
+                        else if (x.Start.PredefinedRouteSegmentFromStartToEnd == -1)
+                            return 1;
+                    }
+                else if (c == d)
+                {
+
+                    if (x.station.Length > y.station.Length)
+                        return -1;
+                    else if (x.station.Length < y.station.Length)
+                        return 1;
+                }
+                
+            }
+
+            return 0;
+            //throw new NotImplementedException();
+        }
+    }
+
+}
