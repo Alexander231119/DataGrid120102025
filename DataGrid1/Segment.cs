@@ -4,7 +4,7 @@ namespace DataGrid1
 {
     public class Segment
     {
-        public double SegmentID;
+        public double SegmentID { get; set; }
         public string SegmentName;
         public double SegmentLength;
         public double TrackID;
