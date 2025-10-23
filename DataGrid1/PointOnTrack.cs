@@ -7,8 +7,8 @@ namespace DataGrid1
 {
     public class PointOnTrack
     {
-        public string PointOnTrackKm;
-        public double PointOnTrackPk;
+        public string PointOnTrackKm { get; set; }
+        public double PointOnTrackPk { get; set; }
         public double PointOnTrackM;
 
         public double DicPointOnTrackKindID;
